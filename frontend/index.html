@@ -1,0 +1,1998 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Intelligent Eye Care — Dashboard</title>
+   <meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self' 'unsafe-inline' http://127.0.0.1:5001 http://127.0.0.1:5002 http://127.0.0.1:5003 http://127.0.0.1:5004 http://127.0.0.1:5005  http://127.0.0.1:5006 https://unpkg.com https://cdn.skypack.dev https://cdn.jsdelivr.net; 
+               connect-src 'self' http://127.0.0.1:5001 http://127.0.0.1:5002 http://127.0.0.1:5003 http://127.0.0.1:5004 http://127.0.0.1:5005  http://127.0.0.1:5006 ; 
+               img-src 'self' data: blob:; 
+               media-src 'self' blob:;">
+
+
+   <!-- Load Chart.js from CDN with proper URL -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body { font-family: Inter, system-ui, Arial;  margin: 0;   background: var(--bg-primary, #0b1220); color: var(--text-primary, #e6eefc);  }
+      .container { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+      .sidebar { background: #111a2b; padding: 20px; border-right: 1px solid #1b2740; }
+      .item { 
+  padding: 12px 10px; 
+  border-radius: 10px; 
+  cursor: pointer; 
+  margin-bottom: 8px; 
+  color: var(--text-primary, #e6eefc);
+}
+      .item.active, .item:hover { 
+  background: var(--bg-hover, #172238); 
+}
+
+      .main { padding: 24px; }
+      .card { 
+  background: var(--bg-secondary, #0f172a); 
+  border: 1px solid var(--border-color, #243453); 
+  border-radius: 14px; 
+  padding: 18px; 
+  margin-bottom: 16px; 
+}
+      .row { display:flex; gap:16px; flex-wrap:wrap; }
+     .label { 
+  font-size: 12px; 
+  color: var(--text-secondary, #95a7c3); 
+  margin-bottom: 6px; 
+}
+:root {
+  /* Dark theme (default) */
+  --bg-primary: #0b1220;
+  --bg-secondary: #0f172a;
+  --bg-sidebar: #111a2b;
+  --bg-hover: #172238;
+  --text-primary: #e6eefc;
+  --text-secondary: #95a7c3;
+  --border-color: #243453;
+  --input-bg: #0e1526;
+  --input-text: #dbe7ff;
+  --input-border: #243453;
+}
+
+body.light-theme {
+  /* Light theme */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-sidebar: #e2e8f0;
+  --bg-hover: #d1d5db;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #cbd5e1;
+  --input-bg: #ffffff;
+  --input-text: #1e293b;
+  --input-border: #cbd5e1;
+}
+
+      .value { font-size: 28px; font-weight: 700; }
+     .btn {
+  background: #2a6bf3;
+  border: none;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+      input[type=range] { width: 100%; }
+      select, input[type=number], input[type=text], input[type=time] {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 8px;
+}
+      .tiny {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+      .grid2 { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:16px; }
+      @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .sidebar { display:none; } .grid2 { grid-template-columns: 1fr; } }
+      .btn:disabled { cursor: not-allowed; }
+     .btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+   .camera-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 240px;
+}
+
+.camera-feed {
+  width: 100%;
+  height: 240px;
+  background: #0a0f1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #243453;
+  border-radius: 10px;
+}
+
+#video-stream {
+  width: 70%;
+  height: 70%;
+  object-fit: cover;
+  display: none;
+}
+
+.camera-placeholder {
+  color: #5a6d8f;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Loading animation */
+.camera-loading {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2a6bf3;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+      .camera-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+      .eye-marker { position: absolute; width: 30px; height: 20px; border: 2px solid #2a6bf3; border-radius: 50%; background: rgba(42, 107, 243, 0.2); transform: translate(-50%, -50%); }
+     .connection-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-left: 10px;
+}
+.connected {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+.disconnected {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+      .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+      .status-connected { background: #2ecc71; }
+      .status-disconnected { background: #e74c3c; }
+     .recommendation {
+  color: #ff4444;
+  font-weight: bold;
+  margin-top: 5px;
+}
+    table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .usage-summary { margin-top: 20px; }
+        .summary-item { display: inline-block; margin-right: 20px; }
+     /* Settings page specific styles */
+    .settings-category { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #243453; }
+    .settings-category h3 { color: #95a7c3; margin-bottom: 15px; font-size: 18px; }
+    .settings-item { display: flex; justify-content: space-between; align-items: center;  margin-bottom: 15px; }
+    .settings-label { 
+      flex: 1; 
+      margin-right: 15px; 
+    }
+    .settings-control { 
+      flex: 2; 
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+    .toggle-switch input { 
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .sidebar { 
+  background: var(--bg-sidebar, #111a2b); 
+  padding: 20px; border-right: 1px solid var(--border-color, #1b2740); 
+}
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #2a6bf3;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    .backup-status {
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 6px;
+      background-color: #172238;
+    }
+    
+    /* Theme preview styles */
+    .theme-previews {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .theme-preview {
+      width: 80px;
+      height: 60px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      overflow: hidden;
+      position: relative;
+    }
+    .theme-preview.active {
+      border-color: #2a6bf3;
+    }
+    .theme-preview-dark {
+      background: #0f172a;
+      border: 1px solid #243453;
+    }
+    .theme-preview-light {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+    }
+    .theme-preview-auto {
+      background: linear-gradient(to right, #0f172a 50%, #f8fafc 50%);
+      border: 1px solid #243453;
+    }
+    .theme-preview-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 10px;
+      text-align: center;
+      padding: 2px;
+    }
+    .theme-preview-light .theme-preview-label {
+      background: rgba(0, 0, 0, 0.8);
+    }
+    /* Add to your existing CSS */
+select {
+  background: #0e1526;
+  color: #dbe7ff;
+  border: 1px solid #243453;
+  border-radius: 8px;
+  padding: 8px;
+  margin: 0 10px;
+}
+
+.error-message {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <div class="item active" onclick="showPage('dashboard', this)">🏠 Dashboard</div>
+        <div class="item" onclick="showPage('brightness', this)">💡 Brightness</div>
+        <div class="item" onclick="showPage('theme', this)">🌞 Theme</div>
+        <div class="item" onclick="showPage('fatigue', this)">👁️ Fatigue</div>
+        <div class="item" onclick="showPage('rest', this)">⏰ Rest Reminder</div>
+        <div class="item" onclick="showPage('predictions', this)">🎯 Predictions</div>
+        <div class="item" onclick="showPage('reports', this)">📊 Reports</div>
+        <div class="item" onclick="showPage('settings', this)">⚙️ Settings</div>
+      </aside>
+      <main class="main">
+        <section id="page-dashboard">
+          <h2>Dashboard</h2>
+          <div class="grid2">
+            <div class="card">
+              <div class="label">Ambient Avg Pixel Brightness (0–255)</div>
+              <input id="inp-bright" type="range" min="0" max="255" value="80" oninput="document.getElementById('val-bright').textContent=this.value">
+              <div class="value"><span id="val-bright">80</span></div>
+              <div class="tiny">Simulated from webcam brightness; replace with live feed later.</div>
+            </div>
+            <div class="card">
+              <div class="label">Context</div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <label>Time of Day:</label>
+                <select id="sel-time">
+                  <option>Morning</option>
+                  <option>Afternoon</option>
+                  <option>Evening</option>
+                  <option>Night</option>
+                </select>
+                <label>Theme:</label>
+                <select id="sel-theme">
+                  <option>Dark</option>
+                  <option>Light</option>
+                </select>
+                <button class="btn" onclick="predict()">🔮 Predict</button>
+              </div>
+              <div class="tiny" style="margin-top:8px;">Uses Python stub now; later plug in your trained models.</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="card" style="flex:1;">
+              <div class="label">Predicted Screen Brightness</div>
+              <div class="value" id="out-brightness">—</div>
+            </div>
+            <div class="card" style="flex:1;">
+              <div class="label">Predicted Theme</div>
+              <div class="value" id="out-theme">—</div>
+            </div>
+            <div class="card" style="flex:1;">
+              <div class="label">Predicted Blue-light Filter</div>
+              <div class="value" id="out-blue">—</div>
+            </div>
+          </div>
+        </section>
+        <section id="page-theme" style="display:none;">
+          <h2>Theme Control</h2>
+          <div class="card">
+            <h3>Manual Mode</h3>
+            <label>
+              <input type="radio" name="manualTheme" value="Light" onclick="setManualTheme('Light')"> 🌞 Light
+            </label>
+            <label>
+              <input type="radio" name="manualTheme" value="Dark" onclick="setManualTheme('Dark')"> 🌙 Dark
+            </label>
+            <div style="margin-top:10px;">
+              <label>🔵 Blue Light Filter</label>
+              <input type="range" min="0" max="100" value="20" id="blue-light-slider" oninput="updateBlueLight(this.value)">
+              <span id="blue-light-val">20%</span>
+            </div>
+            <p id="manual-result" class="tiny">No manual theme set yet.</p>
+          </div>
+          <div class="card">
+            <h3>Schedule Mode</h3>
+            <label>Start Time: <input type="time" id="schedule-start" value="06:00"></label>
+            <label>End Time: <input type="time" id="schedule-end" value="16:00"></label>
+            <label>Theme:
+              <select id="schedule-theme">
+                <option value="Light">🌞 Light</option>
+                <option value="Dark">🌙 Dark</option>
+              </select>
+            </label>
+            <br><br>
+            <button class="btn" onclick="toggleSchedule()">✅ Toggle Schedule</button>
+            <button class="btn" onclick="checkSchedule()">⏰ Check Current Scheduled Theme</button>
+            <p id="schedule-result" class="tiny">No scheduled check yet.</p>
+          </div>
+        </section>
+        <section id="page-brightness" style="display:none;">
+          <h2>Brightness Control</h2>
+          <div class="card">
+            <div class="label">Current Ambient Light Level</div>
+            <div class="value" id="current-ambient">—</div>
+            <div class="tiny">Measured from webcam in real-time</div>
+          </div>
+          <div class="card">
+            <div class="label">Adjusted Screen Brightness</div>
+            <div class="value" id="adjusted-brightness">—</div>
+          </div>
+          <div class="card">
+            <div class="label">Auto-Adjust Interval</div>
+            <select id="adjust-interval" onchange="updateAdjustInterval()">
+              <option value="5000">5 seconds</option>
+              <option value="10000">10 seconds</option>
+              <option value="30000">30 seconds</option>
+              <option value="60000">1 minute</option>
+              <option value="300000">5 minutes</option>
+              <option value="600000">10 minutes</option>
+            </select>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+              <button class="btn" onclick="startAutoAdjustment()">▶ Start Auto Adjust</button>
+              <button class="btn" onclick="stopAutoAdjustment()" style="background: #dc3545;">⏹ Stop Auto Adjust</button>
+            </div>
+            <div class="tiny" id="interval-status">Auto-adjust not active</div>
+          </div>
+        </section>
+       <section id="page-fatigue" style="display:none;">
+          <h2>Fatigue Detection</h2>
+          <div class="camera-container">
+            <div class="camera-feed" id="camera-placeholder">
+              <span class="camera-placeholder">Camera feed will appear here</span>
+            </div>
+            <img id="video-stream" class="camera-feed" src="http://127.0.0.1:5003/video_feed" alt="Video Stream" style="display:none;">
+          </div>
+          <div style="margin-top:10px;">
+            <button class="btn" id="startDetectionBtn" onclick="startFatigueDetection()">▶ Start Detection</button>
+            <button class="btn" id="stopDetectionBtn" onclick="stopFatigueDetection()" disabled>⏹ Stop Detection</button>
+            <span id="backend-status" class="connection-status disconnected">
+              <span id="status-indicator" class="status-indicator status-disconnected"></span>
+              <span id="status-text">Backend not connected</span>
+            </span>
+          </div>
+          <p id="fatigue-status" class="tiny">Status: Unknown</p>
+          <p id="fatigue-recommendation" class="recommendation" style="display:none;"></p>
+        </section>
+        <section id="page-rest" style="display:none;">
+  <h2>Smart Rest Reminder — 20-20-20 Rule</h2>
+  <div class="card">
+    <label>Set Activity Duration (minutes)</label>
+    <input type="number" id="activity-interval" value="20" min="10" max="120">
+    <button class="btn" onclick="startActivityReminder()">Start</button>
+    <button class="btn" onclick="stopActivityReminder()">Stop</button>
+  </div>
+  <p id="rest-status" class="tiny">No reminder active.</p>
+  <div id="countdown" class="value" style="margin-top:15px; display:none;"></div>
+</section>
+
+      <section id="page-predictions" style="display:none;">  
+  <h2>Predictions</h2>
+  
+  <!-- ================= FATIGUE ================= -->
+  <div class="card">
+    <h3>Predicted Fatigue Risk</h3>
+    <p>Check your latest session for fatigue risk, or enable automatic monitoring.</p>
+    
+    <!-- Manual check -->
+    <button class="btn" onclick="checkPredFatigue()">🔍 Check Fatigue Risk</button>
+    <div id="predfatigue-output" style="margin-top:10px;" class="tiny">No check performed yet.</div>
+    
+    <!-- Auto toggle -->
+    <div style="margin-top:20px;">
+      <label>
+        <input type="checkbox" id="autoToggle" onchange="toggleAutoPredFatigue(this.checked)"> 
+        Enable Auto Fatigue Warnings
+      </label>
+    </div>
+  </div>
+
+  <!-- ================= PRODUCTIVITY ================= -->
+<div class="card" style="margin-top:20px;">
+  <h3>Predicted Productivity</h3>
+  <p>Check your latest session productivity or see daily summary.</p>
+  
+  <!-- Date Selection -->
+  <div style="margin-bottom: 15px;">
+    <label>Select Date: </label>
+    <select id="productivityDate" onchange="loadAvailableDates()">
+      <option value="">Today</option>
+    </select>
+    <button class="btn" onclick="loadAvailableDates()">🔄 Refresh Dates</button>
+  </div>
+  
+  <!-- Latest Productivity Check -->
+  <button class="btn" onclick="checkProductivityLatest()">📊 Check Latest Productivity</button>
+  <div id="prod-latest-output" style="margin-top:10px;" class="tiny">No prediction yet.</div>
+  
+  <!-- Daily Productivity Summary -->
+  <button class="btn" style="margin-top:10px;" onclick="checkProductivityDaily()">📅 Daily Productivity</button>
+  <div id="prod-daily-output" style="margin-top:10px;" class="tiny">No summary yet.</div>
+</div>
+</section>
+
+
+       <!-- Reports Section -->
+    <section id="page-reports" style="display: none;">
+    <h2>Reports & Analytics</h2>
+    
+   <div style="margin-bottom: 20px;">
+    <button id="showRestLogsBtn" onclick="showRestLogs()">📋 Show Rest Logs</button>
+    <button id="showAppUsageBtn" onclick="showAppReport()">💻 Show App Usage</button>
+    <button id="showHourlyBtn" onclick="showHourlyUsageReportWithFallback()">🕒 Hourly Usage</button>
+    <button id="showDailyBtn" onclick="showDailyUsageReportWithFallback()">📅 Daily Usage</button>
+  
+</div>
+    <!-- Time-based Chart Container -->
+    <div class="card">
+        <h3>Time-Based Usage Analysis</h3>
+        <div id="time-chart-container" style="min-height: 400px;">
+            <!-- Charts will be rendered here -->
+        </div>
+    </div>
+
+    <!-- App Usage Section -->
+    <div id="appUsageSection">
+        <h3>App Usage Sessions</h3>
+        <button id="refreshReportBtn" onclick="refreshReport()">🔄 Refresh Report</button>
+        <table id="usageTable">
+            <thead>
+                <tr>
+                    <th>App</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Duration</th>
+                    <th>Brightness</th>
+                    <th>Theme Mode</th>
+                </tr>
+            </thead>
+            <tbody id="usageTableBody">
+                <!-- Data will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Usage Summary Section -->
+    <div class="usage-summary" id="usageSummary">
+        <h3>Usage Summary</h3>
+        <!-- Summary will be populated here -->
+    </div>
+
+    <!-- Rest Logs Section -->
+    <div id="restLogsSection" style="display: none;">
+        <p>No rest reminders logged yet.</p>
+    </div>
+</section>
+
+    
+         <section id="page-settings" style="display:none;">
+          <h2>Settings</h2>
+          
+          <div class="settings-category">
+            <h3>🎨 Theme & Appearance</h3>
+            
+            <div class="settings-item">
+              <div class="settings-label">
+                <label for="appTheme">App Theme Mode</label>
+                <div class="tiny">Choose how the app's theme behaves</div>
+              </div>
+              <div class="settings-control">
+                <select id="appTheme" onchange="handleThemeChangeFromDropdown()">
+  <option value="auto">Auto (Match System)</option>
+  <option value="dark">Dark Mode</option>
+  <option value="light">Light Mode</option>
+</select>
+              </div>
+            </div>
+            
+            <div class="theme-previews">
+  <div class="theme-preview theme-preview-auto" onclick="updateAppTheme('auto')">
+    <div class="theme-preview-label">Auto</div>
+  </div>
+  <div class="theme-preview theme-preview-dark" onclick="updateAppTheme('dark')">
+    <div class="theme-preview-label">Dark</div>
+  </div>
+  <div class="theme-preview theme-preview-light" onclick="updateAppTheme('light')">
+    <div class="theme-preview-label">Light</div>
+  </div>
+</div>
+            
+            <div class="settings-item">
+              <div class="settings-label">
+                <label for="systemThemeSync">Sync with System Theme</label>
+                <div class="tiny">Automatically adjust when system theme changes</div>
+              </div>
+              <div class="settings-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="systemThemeSync" checked onchange="toggleSystemThemeSync(this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="settings-category">
+            <h3>🔧 General Settings</h3>
+            
+            <div class="settings-item">
+              <div class="settings-label">
+                <label for="notifications">Enable Notifications</label>
+                <div class="tiny">Get alerts for eye strain warnings</div>
+              </div>
+              <div class="settings-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="notifications" checked onchange="toggleNotifications(this.checked)">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            
+            
+            
+      
+          </div>
+          
+         
+          
+          <div class="settings-category">
+            <h3>💾 Data Management</h3>
+            
+            <div class="settings-item">
+              <div class="settings-label">
+                <label>Data Backup</label>
+                <div class="tiny">Backup your preferences and usage history</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn" onclick="backupData()">Create Backup</button>
+                <button class="btn" onclick="restoreData()">Restore Backup</button>
+              </div>
+            </div>
+            
+            <div class="settings-item">
+              <div class="settings-label">
+                <label>Reset Settings</label>
+                <div class="tiny">Restore all settings to default values</div>
+              </div>
+              <div class="settings-control">
+                <button class="btn" style="background: #dc3545;" onclick="resetSettings()">Reset to Defaults</button>
+              </div>
+            </div>
+            
+            <div id="backupStatus" class="backup-status tiny" style="display: none;"></div>
+          </div>
+          
+          <div class="settings-category">
+            <h3>ℹ️ About</h3>
+            
+            <div class="card">
+              <p><strong>Intelligent Eye Care</strong> v1.2.0</p>
+              <p class="tiny">Designed to reduce eye strain and improve your visual comfort during computer use.</p>
+              <p class="tiny">© 2023 Intelligent Eye Care. All rights reserved.</p>
+              <button class="btn" onclick="checkForUpdates()">Check for Updates</button>
+              <div id="updateStatus" class="tiny" style="margin-top: 10px;"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script>
+      let restTimer = null;
+      let autoAdjustInterval = null;
+      let isAutoAdjusting = false;
+      let currentInterval = 5000;
+      let fatigueInterval = null;
+      let isMonitoring = false;
+
+      function showPage(page, el) {
+        document.querySelectorAll("main section").forEach(sec => sec.style.display = "none");
+        document.getElementById("page-" + page).style.display = "block";
+        document.querySelectorAll(".sidebar .item").forEach(i => i.classList.remove("active"));
+        el.classList.add("active");
+        if (page === 'fatigue') {
+          checkBackendConnection();
+        } else if (page === 'brightness') {
+          startAutoAdjustment();
+        } else if (isAutoAdjusting) {
+          stopAutoAdjustment();
+        }
+      }
+
+      async function predict() {
+        const avg_pixel_brightness = Number(document.getElementById("inp-bright").value);
+        const time_of_day = document.getElementById("sel-time").value;
+        const theme_mode = document.getElementById("sel-theme").value;
+        try {
+          const result = await window.ml.predict({ avg_pixel_brightness, time_of_day, theme_mode });
+          document.getElementById("out-brightness").textContent = result.predicted_screen_brightness + "%";
+          document.getElementById("out-theme").textContent = result.predicted_theme;
+          document.getElementById("out-blue").textContent = result.predicted_blue_light + "%";
+        } catch (e) {
+          alert("Prediction error: " + e.message);
+        }
+      }
+
+      function startRestReminder() {
+        const minutes = Number(document.getElementById("rest-interval").value);
+        if (restTimer) clearInterval(restTimer);
+        restTimer = setInterval(() => alert("⏰ Time to take a short break!"), minutes * 60000);
+        document.getElementById("rest-status").textContent = "Reminder set for every " + minutes + " minutes.";
+      }
+
+      function stopRestReminder() {
+        if (restTimer) {
+          clearInterval(restTimer);
+          restTimer = null;
+          document.getElementById("rest-status").textContent = "No reminder active.";
+        }
+      }
+
+      function simulatePreference() {
+        const themes = ["Dark", "Light"];
+        const theme = themes[Math.floor(Math.random() * themes.length)];
+        const brightness = Math.floor(Math.random() * 100);
+        document.getElementById("pref-output").textContent = "Predicted Preference → Theme: " + theme + ", Brightness: " + brightness + "%";
+      }
+
+      async function autoAdjustBrightness() {
+        try {
+          const response = await fetch("http://127.0.0.1:5001/adjust_brightness", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ theme_mode: "auto" })
+          });
+          const data = await response.json();
+          document.getElementById("current-ambient").textContent = Math.round(data.avg_pixel_brightness) + " / 255";
+          document.getElementById("adjusted-brightness").textContent = data.screen_brightness + "%";
+          const now = new Date();
+          document.getElementById("interval-status").textContent = `Last adjusted: ${now.toLocaleTimeString()} | Next in: ${currentInterval/1000}s`;
+        } catch (err) {
+          console.error("Auto-adjust error:", err);
+          document.getElementById("interval-status").textContent = "Error: Could not adjust brightness";
+        }
+      }
+
+      function updateAdjustInterval() {
+        currentInterval = parseInt(document.getElementById("adjust-interval").value);
+        if (isAutoAdjusting) {
+          stopAutoAdjustment();
+          startAutoAdjustment();
+        }
+      }
+
+      function startAutoAdjustment() {
+        if (isAutoAdjusting) return;
+        stopAutoAdjustment();
+        isAutoAdjusting = true;
+        autoAdjustInterval = setInterval(autoAdjustBrightness, currentInterval);
+        autoAdjustBrightness();
+        updateButtonStates();
+        document.getElementById("interval-status").textContent = `Auto-adjusting every ${currentInterval/1000} seconds`;
+      }
+
+      function stopAutoAdjustment() {
+        if (autoAdjustInterval) {
+          clearInterval(autoAdjustInterval);
+          autoAdjustInterval = null;
+        }
+        isAutoAdjusting = false;
+        updateButtonStates();
+        document.getElementById("interval-status").textContent = "Auto-adjust not active";
+      }
+
+      function updateButtonStates() {
+        const startBtn = document.querySelector('button[onclick="startAutoAdjustment()"]');
+        const stopBtn = document.querySelector('button[onclick="stopAutoAdjustment()"]');
+        if (isAutoAdjusting) {
+          startBtn.disabled = true;
+          startBtn.style.opacity = "0.6";
+          stopBtn.disabled = false;
+          stopBtn.style.opacity = "1";
+        } else {
+          startBtn.disabled = false;
+          startBtn.style.opacity = "1";
+          stopBtn.disabled = true;
+          stopBtn.style.opacity = "0.6";
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(updateButtonStates, 100);
+        document.getElementById("adjust-interval").value = "5000";
+      });
+
+      let scheduleActive = false;
+
+      async function setManualTheme(theme) {
+        try {
+          const blueLight = document.getElementById("blue-light-slider").value;
+          const res = await fetch("http://127.0.0.1:5002/set_manual_theme", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ theme, blue_light: parseInt(blueLight) })
+          });
+          const data = await res.json();
+          document.getElementById("manual-result").textContent = `${data.applied ? "✅ Applied" : "❌ Failed"} | Theme: ${data.theme} | Blue Light: ${data.blue_light}%`;
+        } catch (err) {
+          console.error("Manual theme error:", err);
+          document.getElementById("manual-result").textContent = "Error: " + err.message;
+        }
+      }
+
+      function updateBlueLight(value) {
+        document.getElementById("blue-light-val").textContent = value + "%";
+        fetch("http://127.0.0.1:5002/set_blue_light", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ blue_light: parseInt(value) })
+        }).then(response => response.json()).then(data => console.log(`${data.applied ? "✅" : "❌"} Blue light updated to: ${data.blue_light}%`)).catch(err => console.error("Blue light error:", err));
+      }
+
+      async function toggleSchedule() {
+        try {
+          if (scheduleActive) {
+            await fetch("http://127.0.0.1:5002/disable_schedule", { method: "POST", headers: {"Content-Type": "application/json"} });
+            document.getElementById("schedule-result").textContent = "❌ Schedule disabled";
+            scheduleActive = false;
+          } else {
+            const start = document.getElementById("schedule-start").value;
+            const end = document.getElementById("schedule-end").value;
+            const theme = document.getElementById("schedule-theme").value;
+            const res = await fetch("http://127.0.0.1:5002/set_schedule", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({ start, end, theme })
+            });
+            const data = await res.json();
+            document.getElementById("schedule-result").textContent = `${data.applied ? "✅" : "❌"} Schedule enabled: ${theme} (${start} → ${end})`;
+            scheduleActive = true;
+          }
+        } catch (err) {
+          console.error("Schedule error:", err);
+          document.getElementById("schedule-result").textContent = "Error: " + err.message;
+        }
+      }
+
+      async function checkSchedule() {
+        try {
+          const res = await fetch("http://127.0.0.1:5002/scheduled_theme");
+          const data = await res.json();
+          let status = "Current Theme: " + data.theme + " (Mode: " + data.mode + ")";
+          if (data.schedule_active) status += " | Schedule: Active";
+          document.getElementById("schedule-result").textContent = status;
+        } catch (err) {
+          console.error("Check schedule error:", err);
+          document.getElementById("schedule-result").textContent = "Error checking schedule: " + err.message;
+        }
+      }
+
+      async function checkBackendConnection() {
+        try {
+          const response = await fetch('http://127.0.0.1:5003/status', { method: 'GET', headers: { 'Accept': 'application/json' } });
+          setConnectionStatus(response.ok);
+        } catch (error) {
+          console.error('Backend connection failed:', error);
+          setConnectionStatus(false);
+        }
+      }
+
+      function setConnectionStatus(connected) {
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const backendStatus = document.getElementById('backend-status');
+        if (connected) {
+          statusIndicator.className = 'status-indicator status-connected';
+          statusText.textContent = 'Backend connected';
+          backendStatus.className = 'connection-status connected';
+        } else {
+          statusIndicator.className = 'status-indicator status-disconnected';
+          statusText.textContent = 'Backend not connected';
+          backendStatus.className = 'connection-status disconnected';
+        }
+      }
+
+
+      async function startFatigueDetection() {
+        try {
+          const response = await fetch('http://127.0.0.1:5003/start_detection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const data = await response.json();
+          if (data.status === 'started') {
+            const videoStream = document.getElementById('video-stream');
+            videoStream.src = 'http://127.0.0.1:5003/video_feed?' + new Date().getTime();
+            videoStream.style.display = 'block';
+            document.getElementById('camera-placeholder').style.display = 'none';
+            document.getElementById('startDetectionBtn').disabled = true;
+            document.getElementById('startDetectionBtn').style.opacity = '0.6';
+            document.getElementById('stopDetectionBtn').disabled = false;
+            document.getElementById('stopDetectionBtn').style.opacity = '1';
+            startStatusPolling();
+          } else {
+            alert('Failed to start detection: ' + (data.error || 'Unknown error'));
+          }
+        } catch (e) {
+          alert('Error starting detection: ' + e.message);
+        }
+      }
+
+      async function stopFatigueDetection() {
+        try {
+          const response = await fetch('http://127.0.0.1:5003/stop_detection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const data = await response.json();
+          if (data.status === 'stopped') {
+            const videoStream = document.getElementById('video-stream');
+            videoStream.src = '';
+            videoStream.style.display = 'none';
+            document.getElementById('camera-placeholder').style.display = 'flex';
+            document.getElementById('startDetectionBtn').disabled = false;
+            document.getElementById('startDetectionBtn').style.opacity = '1';
+            document.getElementById('stopDetectionBtn').disabled = true;
+            document.getElementById('stopDetectionBtn').style.opacity = '0.6';
+            stopStatusPolling();
+            document.getElementById('fatigue-recommendation').style.display = 'none';
+          }
+        } catch (e) {
+          alert('Error stopping detection: ' + e.message);
+        }
+      }
+
+      let statusPollingInterval = null;
+
+      async function checkFatigueStatus() {
+        try {
+          const res = await fetch('http://127.0.0.1:5003/status');
+          const data = await res.json();
+          document.getElementById('fatigue-status').textContent = 'Status: ' + data.fatigue_status;
+          const recommendation = document.getElementById('fatigue-recommendation');
+          recommendation.textContent = data.recommendation;
+          if (data.fatigue_status.includes('Fatigue Detected')) {
+            recommendation.style.display = 'block';
+            alert('Warning: ' + data.fatigue_status + '\n' + data.recommendation); // Popup alert
+          } else {
+            recommendation.style.display = 'none';
+          }
+        } catch (e) {
+          alert('Error fetching fatigue status: ' + e.message);
+        }
+      }
+
+      function startStatusPolling() {
+        if (statusPollingInterval) clearInterval(statusPollingInterval);
+        statusPollingInterval = setInterval(checkFatigueStatus, 2000);
+        checkFatigueStatus();
+      }
+
+      function stopStatusPolling() {
+        if (statusPollingInterval) {
+          clearInterval(statusPollingInterval);
+          statusPollingInterval = null;
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        checkBackendConnection();
+        document.getElementById('stopDetectionBtn').disabled = true;
+        document.getElementById('stopDetectionBtn').style.opacity = '0.6';
+      });
+      let activityTimer = null;
+let reminderStartTime = null;
+let currentRestDuration = 20; // start with 20 sec
+
+function startActivityReminder() {
+  stopActivityReminder();
+  const minutes = Number(document.getElementById("activity-interval").value);
+  reminderStartTime = Date.now();
+  currentRestDuration = 20;
+  activityTimer = setInterval(checkActivityReminder, 1000); // check every second
+  document.getElementById("rest-status").textContent =
+    `⏳ Monitoring... First reminder after ${minutes} minutes.`;
+}
+
+function stopActivityReminder() {
+  if (activityTimer) clearInterval(activityTimer);
+  activityTimer = null;
+  document.getElementById("rest-status").textContent = "No reminder active.";
+  document.getElementById("countdown").style.display = "none";
+}
+
+function checkActivityReminder() {
+  const minutes = Number(document.getElementById("activity-interval").value);
+  const elapsedMin = (Date.now() - reminderStartTime) / 60000;
+
+  // trigger at 20 mins, then escalate
+  if (elapsedMin >= minutes) {
+    triggerRestReminder(currentRestDuration);
+    reminderStartTime = Date.now();
+    currentRestDuration += 10; // increase by 10s each cycle
+  }
+}
+
+function triggerRestReminder(seconds) {
+  alert(`👀 20-20-20 Rule!\nLook 20 ft away for ${seconds} seconds.`);
+  startCountdown(seconds);
+}
+
+function startCountdown(seconds) {
+  const countdownEl = document.getElementById("countdown");
+  countdownEl.style.display = "block";
+  let remaining = seconds;
+  countdownEl.textContent = `⏳ ${remaining} sec`;
+
+  const countdownTimer = setInterval(() => {
+    remaining--;
+    countdownEl.textContent = `⏳ ${remaining} sec`;
+    if (remaining <= 0) {
+      clearInterval(countdownTimer);
+      countdownEl.style.display = "none";
+    }
+  }, 1000);
+}
+
+let restLogs = []; // store reminder events
+
+function triggerRestReminder(seconds) {
+  const accepted = confirm(`👀 20-20-20 Rule!\nLook 20 ft away for ${seconds} seconds.\nPress OK to start countdown or Cancel to skip.`);
+  
+  if (accepted) {
+    startCountdown(seconds, true); // mark as completed
+  } else {
+    logRestEvent(seconds, "ignored");
+  }
+}
+
+function startCountdown(seconds, logAfter = false) {
+  const countdownEl = document.getElementById("countdown");
+  countdownEl.style.display = "block";
+  let remaining = seconds;
+  countdownEl.textContent = `⏳ ${remaining} sec`;
+
+  const countdownTimer = setInterval(() => {
+    remaining--;
+    countdownEl.textContent = `⏳ ${remaining} sec`;
+    if (remaining <= 0) {
+      clearInterval(countdownTimer);
+      countdownEl.style.display = "none";
+      if (logAfter) logRestEvent(seconds, "completed");
+    }
+  }, 1000);
+}
+
+function logRestEvent(duration, status) {
+  restLogs.push({
+    timestamp: new Date().toLocaleString(),
+    duration: duration,
+    status: status
+  });
+  console.log("📊 Rest Log Added:", restLogs);
+}
+
+function showRestReport() {
+  if (restLogs.length === 0) {
+    document.getElementById("report-output").innerHTML = "<p>No rest reminders logged yet.</p>";
+    return;
+  }
+
+  let completed = restLogs.filter(r => r.status === "completed").length;
+  let ignored = restLogs.filter(r => r.status === "ignored").length;
+  let avgDuration = Math.round(
+    restLogs.filter(r => r.status === "completed")
+            .reduce((sum, r) => sum + r.duration, 0) / Math.max(1, completed)
+  );
+
+  let html = `
+    <p><b>Total Reminders:</b> ${restLogs.length}</p>
+    <p><b>Completed:</b> ✅ ${completed}</p>
+    <p><b>Ignored:</b> ❌ ${ignored}</p>
+    <p><b>Average Break Duration:</b> ⏱ ${avgDuration} sec</p>
+    <h3>📋 Detailed Log</h3>
+    <ul>
+      ${restLogs.map(r => `<li>[${r.timestamp}] ${r.duration}s → ${r.status}</li>`).join("")}
+    </ul>
+  `;
+  document.getElementById("report-output").innerHTML = html;
+}
+// Function to fetch app usage data
+// Update the table to show sessions
+function populateSessionTable(data) {
+    const tbody = document.querySelector('#usageTableBody');
+    tbody.innerHTML = '';
+    data.forEach(session => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${session.app}</td>
+            <td>${session.start_time}</td>
+            <td>${session.end_time || 'Active'}</td>
+            <td>${session.duration ? session.duration + 's' : '-'}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Fetch session data instead of samples
+async function fetchAppSessions() {
+    try {
+        const response = await fetch('http://127.0.0.1:5004/app_report');
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching app sessions:', error);
+        return [];
+    }
+}
+
+// Fetch usage summary
+async function fetchUsageSummary() {
+    try {
+        const response = await fetch('http://127.0.0.1:5004/usage_summary');
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching usage summary:', error);
+        return [];
+    }
+}
+
+// Updated fetchAppUsage function for session data
+async function fetchAppUsage() {
+    try {
+        const response = await fetch('http://127.0.0.1:5004/app_report');
+        if (!response.ok) {
+            throw new Error('Failed to fetch data');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching app usage:', error);
+        alert('Error loading app usage data. Ensure the backend server is running on port 5004.');
+        return [];
+    }
+}
+
+// Updated function to populate the table with brightness and theme data
+function populateTable(data) {
+    const tbody = document.querySelector('#usageTableBody');
+    tbody.innerHTML = ''; // Clear existing rows
+    data.forEach(session => {
+        const row = document.createElement('tr');
+        const appCell = document.createElement('td');
+        const startTimeCell = document.createElement('td');
+        const endTimeCell = document.createElement('td');
+        const durationCell = document.createElement('td');
+        const brightnessCell = document.createElement('td');
+        const themeCell = document.createElement('td');
+        
+        appCell.textContent = session.app || 'Unknown';
+        startTimeCell.textContent = session.start_time || 'N/A';
+        endTimeCell.textContent = session.end_time || 'Active';
+        durationCell.textContent = session.duration ? session.duration + 's' : '-';
+        brightnessCell.textContent = session.brightness !== null ? session.brightness + '%' : 'N/A';
+        themeCell.textContent = session.theme_mode || 'Unknown';
+        
+        // Add theme-based styling
+        if (session.theme_mode === 'Dark') {
+            themeCell.style.color = '#2ecc71'; // Green for dark theme
+        } else if (session.theme_mode === 'Light') {
+            themeCell.style.color = '#f39c12'; // Orange for light theme
+        }
+        
+        row.appendChild(appCell);
+        row.appendChild(startTimeCell);
+        row.appendChild(endTimeCell);
+        row.appendChild(durationCell);
+        row.appendChild(brightnessCell);
+        row.appendChild(themeCell);
+        tbody.appendChild(row);
+    });
+}
+
+// Updated function to generate usage summary with brightness/theme insights
+function generateSummary(data) {
+    if (data.length === 0) {
+        document.getElementById('report-output').innerHTML = '<p>No app usage tracked yet.</p>';
+        return null;
+    }
+
+    // Calculate statistics
+    const appSummary = {};
+    let totalBrightness = 0;
+    let brightnessCount = 0;
+    const themeUsage = { Dark: 0, Light: 0, Unknown: 0 };
+
+    data.forEach(session => {
+        if (!appSummary[session.app]) {
+            appSummary[session.app] = {
+                sessionCount: 0,
+                totalSeconds: 0,
+                totalBrightness: 0,
+                brightnessCount: 0,
+                themeUsage: { Dark: 0, Light: 0, Unknown: 0 },
+                lastActivity: ''
+            };
+        }
+        
+        appSummary[session.app].sessionCount += 1;
+        appSummary[session.app].totalSeconds += session.duration || 0;
+        
+        if (session.brightness !== null) {
+            appSummary[session.app].totalBrightness += session.brightness;
+            appSummary[session.app].brightnessCount += 1;
+            totalBrightness += session.brightness;
+            brightnessCount += 1;
+        }
+        
+        if (session.theme_mode) {
+            appSummary[session.app].themeUsage[session.theme_mode] = (appSummary[session.app].themeUsage[session.theme_mode] || 0) + 1;
+            themeUsage[session.theme_mode] = (themeUsage[session.theme_mode] || 0) + 1;
+        }
+        
+        if (session.start_time > appSummary[session.app].lastActivity) {
+            appSummary[session.app].lastActivity = session.start_time;
+        }
+    });
+
+    const avgBrightness = brightnessCount > 0 ? Math.round(totalBrightness / brightnessCount) : 'N/A';
+
+    let html = '<h3>💻 App Usage Report with Brightness & Theme</h3>';
+    html += `<p><b>Overall Average Brightness:</b> ${avgBrightness}%</p>`;
+    html += `<p><b>Theme Usage:</b> Dark: ${themeUsage.Dark}, Light: ${themeUsage.Light}, Unknown: ${themeUsage.Unknown}</p>`;
+    html += '<ul>';
+    
+    for (let app in appSummary) {
+        const totalMinutes = Math.round(appSummary[app].totalSeconds / 60);
+        const avgAppBrightness = appSummary[app].brightnessCount > 0 ? 
+            Math.round(appSummary[app].totalBrightness / appSummary[app].brightnessCount) : 'N/A';
+        
+        html += `<li><b>${app}</b> → ${appSummary[app].sessionCount} sessions, ${totalMinutes} minutes, `;
+        html += `Avg Brightness: ${avgAppBrightness}%, `;
+        html += `Theme: D:${appSummary[app].themeUsage.Dark}/L:${appSummary[app].themeUsage.Light}</li>`;
+    }
+    html += '</ul>';
+    
+    document.getElementById('report-output').innerHTML = html;
+
+    // Prepare data for chart
+    const labels = Object.keys(appSummary);
+    const values = labels.map(app => Math.round(appSummary[app].totalSeconds / 60));
+    
+    return { labels: labels, values: values };
+}
+// Updated chart drawing function for minutes instead of count
+let usageChartInstance = null;
+function drawUsageChart(labels, values) {
+    const ctx = document.getElementById('usageChart').getContext('2d');
+    if (usageChartInstance) {
+        usageChartInstance.destroy();
+    }
+    usageChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Usage Minutes',
+                data: values,
+                backgroundColor: 'rgba(42, 107, 243, 0.7)'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { 
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Minutes'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Applications'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Updated Show App Report function
+async function showAppReport() {
+    try {
+        const data = await fetchAppUsage();
+        populateTable(data);
+        const summaryData = generateSummary(data);
+        if (summaryData) {
+            drawUsageChart(summaryData.labels, summaryData.values);
+        }
+        document.getElementById('appUsageSection').style.display = 'block';
+        document.getElementById('restLogsSection').style.display = 'none';
+    } catch (err) {
+        console.error('App report error:', err);
+        document.getElementById('report-output').innerHTML = '<p>⚠ Error loading app report.</p>';
+    }
+}
+
+// Updated Load App Report function
+async function loadAppReport() {
+    try {
+        const data = await fetchAppUsage();
+        populateTable(data);
+        const summaryData = generateSummary(data);
+        if (summaryData) {
+            drawUsageChart(summaryData.labels, summaryData.values);
+        }
+    } catch (e) {
+        console.error('Error loading report:', e);
+        alert('Failed to load app report: ' + e.message);
+    }
+}
+
+// Updated Refresh Report function
+async function refreshReport() {
+    try {
+        const data = await fetchAppUsage();
+        populateTable(data);
+        const summaryData = generateSummary(data);
+        if (summaryData) {
+            drawUsageChart(summaryData.labels, summaryData.values);
+        }
+    } catch (err) {
+        console.error('Refresh report error:', err);
+        document.getElementById('report-output').innerHTML = '<p>⚠ Error refreshing app report.</p>';
+    }
+}
+
+// Show Rest Logs function remains the same
+function showRestLogs() {
+    alert('Rest logs functionality not implemented yet.');
+}
+// New function to fetch usage by hour data
+
+// Enhanced function to fetch usage by hour data with error handling
+async function fetchUsageByHour() {
+    try {
+        const response = await fetch('http://127.0.0.1:5004/usage_by_hour');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Hourly data:', data);
+        return data;
+    } catch (error) {
+        console.error('Error fetching usage by hour:', error);
+        showError('Failed to load hourly data. Check console for details.');
+        return [];
+    }
+}
+
+// Enhanced function to fetch usage by date data with error handling
+async function fetchUsageByDate() {
+    try {
+        const response = await fetch('http://127.0.0.1:5004/usage_by_date');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Daily data:', data);
+        return data;
+    } catch (error) {
+        console.error('Error fetching usage by date:', error);
+        showError('Failed to load daily data. Check console for details.');
+        return [];
+    }
+}
+
+// Function to show error messages
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.style.color = '#e74c3c';
+    errorDiv.style.padding = '10px';
+    errorDiv.style.margin = '10px 0';
+    errorDiv.style.border = '1px solid #e74c3c';
+    errorDiv.style.borderRadius = '5px';
+    errorDiv.style.backgroundColor = '#fadbd8';
+    errorDiv.innerHTML = `<strong>Error:</strong> ${message}`;
+    document.getElementById('time-chart-container').appendChild(errorDiv);
+}
+
+// Check if Chart.js is loaded
+function isChartJsLoaded() {
+    if (typeof Chart === 'undefined') {
+        showError('Chart.js library is not loaded. Please check your internet connection or CDN link.');
+        return false;
+    }
+    return true;
+}
+
+// Enhanced function to create time-based usage chart
+function createTimeBasedUsageChart(canvasId, data, timeField, title) {
+    if (!isChartJsLoaded()) {
+        return null;
+    }
+
+    if (data.length === 0) {
+        showError('No data available for the selected time period.');
+        return null;
+    }
+
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) {
+        showError('Canvas element not found.');
+        return null;
+    }
+
+    const chartContext = ctx.getContext('2d');
+    if (!chartContext) {
+        showError('Could not get 2D context for canvas.');
+        return null;
+    }
+    
+    // Group data by time period and app
+    const timePeriods = [...new Set(data.map(item => item[timeField]))].sort();
+    const apps = [...new Set(data.map(item => item.app))];
+    
+    console.log('Time periods:', timePeriods);
+    console.log('Apps:', apps);
+    console.log('Data:', data);
+
+    // Prepare datasets for each app
+    const datasets = apps.map((app, index) => {
+        const appData = data.filter(item => item.app === app);
+        const brightnessValues = timePeriods.map(time => {
+            const item = appData.find(d => d[timeField] === time);
+            return item ? item.avg_brightness : 0;
+        });
+        
+        // Generate color based on app (consistent colors)
+        const hue = (index * 137) % 360; // Golden angle for distinct colors
+        return {
+            label: app,
+            data: timePeriods.map(time => {
+                const item = appData.find(d => d[timeField] === time);
+                return item ? item.total_minutes : 0;
+            }),
+            backgroundColor: `hsla(${hue}, 70%, 60%, 0.7)`,
+            borderColor: `hsla(${hue}, 70%, 50%, 1)`,
+            borderWidth: 1,
+            brightnessData: brightnessValues
+        };
+    });
+
+    try {
+        // Create the chart
+        const chart = new Chart(chartContext, {
+            type: 'bar',
+            data: {
+                labels: timePeriods,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title,
+                        font: { size: 16 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterBody: function(context) {
+                                const datasetIndex = context[0].datasetIndex;
+                                const dataIndex = context[0].dataIndex;
+                                const brightness = context.chart.data.datasets[datasetIndex].brightnessData[dataIndex];
+                                return `Brightness: ${brightness}%`;
+                            },
+                            afterLabel: function(context) {
+                                const timePeriod = context.label;
+                                const app = context.dataset.label;
+                                const item = data.find(d => d[timeField] === timePeriod && d.app === app);
+                                return `Theme: ${item ? item.themes : 'Unknown'}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: timeField === 'hour' ? 'Time of Day' : 'Date'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Usage Minutes'
+                        }
+                    }
+                }
+            }
+        });
+
+        return chart;
+    } catch (error) {
+        console.error('Error creating chart:', error);
+        showError('Error creating chart: ' + error.message);
+        return null;
+    }
+}
+
+// Enhanced function to show hourly usage report
+async function showHourlyUsageReport() {
+    try {
+        if (!isChartJsLoaded()) {
+            return;
+        }
+
+        document.getElementById('time-chart-container').innerHTML = '<p>Loading hourly data...</p>';
+        const data = await fetchUsageByHour();
+        
+        if (data.length === 0) {
+            document.getElementById('time-chart-container').innerHTML = '<p>No hourly data available for today.</p>';
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.id = 'hourlyUsageChart';
+        canvas.style.maxHeight = '400px';
+        canvas.style.width = '100%';
+        
+        document.getElementById('time-chart-container').innerHTML = '';
+        document.getElementById('time-chart-container').appendChild(canvas);
+        
+        createTimeBasedUsageChart('hourlyUsageChart', data, 'hour', 'App Usage by Hour (with Brightness & Theme)');
+        
+    } catch (error) {
+        console.error('Error showing hourly report:', error);
+        showError('Error loading hourly report: ' + error.message);
+    }
+}
+
+// Enhanced function to show daily usage report
+async function showDailyUsageReport() {
+    try {
+        if (!isChartJsLoaded()) {
+            return;
+        }
+
+        document.getElementById('time-chart-container').innerHTML = '<p>Loading daily data...</p>';
+        const data = await fetchUsageByDate();
+        
+        if (data.length === 0) {
+            document.getElementById('time-chart-container').innerHTML = '<p>No daily data available.</p>';
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.id = 'dailyUsageChart';
+        canvas.style.maxHeight = '400px';
+        canvas.style.width = '100%';
+        
+        document.getElementById('time-chart-container').innerHTML = '';
+        document.getElementById('time-chart-container').appendChild(canvas);
+        
+        createTimeBasedUsageChart('dailyUsageChart', data, 'date', 'App Usage by Date (with Brightness & Theme)');
+        
+    } catch (error) {
+        console.error('Error showing daily report:', error);
+        showError('Error loading daily report: ' + error.message);
+    }
+}
+
+// Function to show brightness heatmap overlay
+function addBrightnessHeatmap(chart, data, timeField) {
+    const ctx = chart.ctx;
+    const meta = chart.getDatasetMeta(0);
+    const scale = chart.scales.x;
+    
+    data.forEach(item => {
+        const xPos = scale.getPixelForValue(item[timeField]);
+        const brightness = item.avg_brightness;
+        
+        if (brightness && brightness !== "N/A") {
+            const intensity = brightness / 100;
+            ctx.fillStyle = `rgba(255, 200, 0, ${intensity * 0.3})`;
+            ctx.fillRect(xPos - scale.width / (scale.ticks.length * 2), 0, 
+                        scale.width / scale.ticks.length, chart.height);
+        }
+    });
+}
+
+// Function to generate test data for development
+function generateTestData(timeField) {
+    const apps = ['Chrome.exe', 'VSCode.exe', 'Slack.exe', 'Terminal.exe'];
+    const timePeriods = timeField === 'hour' 
+        ? ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']
+        : ['2025-08-28', '2025-08-29', '2025-08-30', '2025-08-31', '2025-09-01'];
+    
+    const testData = [];
+    
+    timePeriods.forEach(time => {
+        apps.forEach((app, index) => {
+            testData.push({
+                [timeField]: time,
+                app: app,
+                total_minutes: Math.floor(Math.random() * 120) + 10,
+                avg_brightness: Math.floor(Math.random() * 50) + 30,
+                themes: index % 2 === 0 ? 'Dark' : 'Light'
+            });
+        });
+    });
+    
+    return testData;
+}
+
+// Test function to use sample data
+async function showTestHourlyReport() {
+    const testData = generateTestData('hour');
+    const canvas = document.createElement('canvas');
+    canvas.id = 'testHourlyChart';
+    document.getElementById('time-chart-container').innerHTML = '';
+    document.getElementById('time-chart-container').appendChild(canvas);
+    createTimeBasedUsageChart('testHourlyChart', testData, 'hour', 'Test Hourly Data');
+}
+
+async function showTestDailyReport() {
+    const testData = generateTestData('date');
+    const canvas = document.createElement('canvas');
+    canvas.id = 'testDailyChart';
+    document.getElementById('time-chart-container').innerHTML = '';
+    document.getElementById('time-chart-container').appendChild(canvas);
+    createTimeBasedUsageChart('testDailyChart', testData, 'date', 'Test Daily Data');
+}
+
+// Fallback function to load Chart.js dynamically
+function loadChartJsFallback() {
+    if (typeof Chart !== 'undefined') {
+        return Promise.resolve(); // Already loaded
+    }
+
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.onload = resolve;
+        script.onerror = () => {
+            showError('Failed to load Chart.js from CDN. Please check your internet connection.');
+            reject(new Error('Chart.js failed to load'));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// Enhanced show functions with fallback loading
+async function showHourlyUsageReportWithFallback() {
+    try {
+        await loadChartJsFallback();
+        await showHourlyUsageReport();
+    } catch (error) {
+        console.error('Failed to load Chart.js:', error);
+    }
+}
+
+async function showDailyUsageReportWithFallback() {
+    try {
+        await loadChartJsFallback();
+        await showDailyUsageReport();
+    } catch (error) {
+        console.error('Failed to load Chart.js:', error);
+    }
+}// Test function to use sample data with Chart.js check
+async function showTestHourlyReport() {
+    if (!isChartJsLoaded()) {
+        await loadChartJsFallback();
+    }
+    
+    const testData = generateTestData('hour');
+    const canvas = document.createElement('canvas');
+    canvas.id = 'testHourlyChart';
+    canvas.style.maxHeight = '400px';
+    canvas.style.width = '100%';
+    document.getElementById('time-chart-container').innerHTML = '';
+    document.getElementById('time-chart-container').appendChild(canvas);
+    createTimeBasedUsageChart('testHourlyChart', testData, 'hour', 'Test Hourly Data');
+}
+
+async function showTestDailyReport() {
+    if (!isChartJsLoaded()) {
+        await loadChartJsFallback();
+    }
+    
+    const testData = generateTestData('date');
+    const canvas = document.createElement('canvas');
+    canvas.id = 'testDailyChart';
+    canvas.style.maxHeight = '400px';
+    canvas.style.width = '100%';
+    document.getElementById('time-chart-container').innerHTML = '';
+    document.getElementById('time-chart-container').appendChild(canvas);
+    createTimeBasedUsageChart('testDailyChart', testData, 'date', 'Test Daily Data');
+}
+
+async function checkPredFatigue() {
+  try {
+    const res = await fetch("http://127.0.0.1:5005/predfatigue/latest");
+    const data = await res.json();
+
+    if (data.error) {
+      document.getElementById("predfatigue-output").innerHTML =
+        `<span style="color:red;">❌ Error: ${data.error}</span>`;
+      return;
+    }
+
+    const risk = data.fatigue_prediction === 1 ? "⚠ HIGH RISK" : "✅ Low Risk";
+    const prob = (data.fatigue_probability * 100).toFixed(1);
+
+    document.getElementById("predfatigue-output").innerHTML = `
+      <b>Fatigue Risk:</b> ${risk}<br>
+      <b>Probability:</b> ${prob}%<br>
+      <b>Session Duration:</b> ${data.duration_minutes.toFixed(2)} min<br>
+      <b>Brightness:</b> ${data.brightness}<br>
+      <b>Night Session:</b> ${data.night_session ? "Yes 🌙" : "No ☀️"}
+    `;
+  } catch (err) {
+    document.getElementById("predfatigue-output").innerHTML =
+      `<span style="color:red;">❌ Failed to connect to API.</span>`;
+  }
+}
+
+async function toggleAutoPredFatigue(enabled) {
+  try {
+    const res = await fetch(`http://127.0.0.1:5005/toggle_autopredfatigue?enabled=${enabled}`);
+    const data = await res.json();
+
+    document.getElementById("predfatigue-output").innerHTML =
+      `🔄 Auto fatigue warnings ${data.auto_trigger_enabled ? "ENABLED ✅" : "DISABLED ❌"}`;
+  } catch (err) {
+    document.getElementById("predfatigue-output").innerHTML =
+      `<span style="color:red;">❌ Failed to toggle auto fatigue.</span>`;
+  }
+}
+
+
+
+     // Settings-related variables
+let settings = {
+  appTheme: "auto",
+  systemThemeSync: true,
+  notifications: true,
+  startup: false,
+  dataCollection: true,
+  blueLightDefault: 20,
+  minBrightness: 15,
+  breakStrictness: "normal"
+};
+
+// Detect system theme
+function getSystemTheme() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+// Apply theme to the app
+function applyTheme(theme) {
+  if (theme === 'auto') {
+    theme = getSystemTheme();
+  }
+  
+  // Remove any existing theme classes
+  document.body.classList.remove('light-theme', 'dark-theme');
+  
+  if (theme === 'dark') {
+    document.body.classList.add('dark-theme');
+    console.log("Applied dark theme");
+  } else {
+    document.body.classList.add('light-theme');
+    console.log("Applied light theme");
+  }
+  
+  // Update theme previews
+  document.querySelectorAll('.theme-preview').forEach(preview => {
+    preview.classList.remove('active');
+  });
+  
+  const activePreview = document.querySelector(`.theme-preview-${theme}`);
+  if (activePreview) {
+    activePreview.classList.add('active');
+  }
+}
+
+// Listen for system theme changes
+function setupThemeListener() {
+  if (window.matchMedia) {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleThemeChange = (e) => {
+      if (settings.systemThemeSync && settings.appTheme === 'auto') {
+        applyTheme('auto');
+      }
+    };
+    
+    mediaQuery.addEventListener('change', handleThemeChange);
+  }
+}
+
+// Load settings from localStorage
+function loadSettings() {
+  const savedSettings = localStorage.getItem('eyeCareSettings');
+  if (savedSettings) {
+    try {
+      settings = {...settings, ...JSON.parse(savedSettings)};
+      applySettings();
+    } catch (e) {
+      console.error("Error loading settings:", e);
+    }
+  }
+}
+
+// Save settings to localStorage
+function saveSettings() {
+  localStorage.setItem('eyeCareSettings', JSON.stringify(settings));
+}
+
+// Apply settings to UI elements
+function applySettings() {
+  // Set UI controls
+  document.getElementById('appTheme').value = settings.appTheme;
+  document.getElementById('systemThemeSync').checked = settings.systemThemeSync;
+  document.getElementById('notifications').checked = settings.notifications;
+  document.getElementById('startup').checked = settings.startup;
+  document.getElementById('dataCollection').checked = settings.dataCollection;
+  
+  // Apply theme
+  applyTheme(settings.appTheme);
+  
+  // Update theme previews
+  document.querySelectorAll('.theme-preview').forEach(preview => {
+    preview.classList.remove('active');
+  });
+  
+  const activePreview = document.querySelector(`.theme-preview-${settings.appTheme}`);
+  if (activePreview) {
+    activePreview.classList.add('active');
+  }
+}
+
+// Theme-related settings functions
+function updateAppTheme(theme) {
+  settings.appTheme = theme;
+  saveSettings();
+  applyTheme(theme);
+  showNotification(`Theme set to ${theme === 'auto' ? 'Auto (Match System)' : theme}`);
+}
+
+function toggleSystemThemeSync(enabled) {
+  settings.systemThemeSync = enabled;
+  saveSettings();
+  showNotification("System theme sync " + (enabled ? "enabled" : "disabled"));
+  
+  // If sync is enabled and we're in auto mode, apply system theme immediately
+  if (enabled && settings.appTheme === 'auto') {
+    applyTheme('auto');
+  }
+}
+
+// Other settings functions
+function toggleNotifications(enabled) {
+  settings.notifications = enabled;
+  saveSettings();
+  showNotification("Notifications " + (enabled ? "enabled" : "disabled"));
+}
+
+function showNotification(message) {
+  if (settings.notifications) {
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.bottom = '20px';
+    notification.style.right = '20px';
+    notification.style.backgroundColor = settings.appTheme === 'light' ? '#f8fafc' : '#0f172a';
+    notification.style.color = settings.appTheme === 'light' ? '#1e293b' : '#e6eefc';
+    notification.style.padding = '12px 16px';
+    notification.style.borderRadius = '8px';
+    notification.style.border = '1px solid #2a6bf3';
+    notification.style.zIndex = '1000';
+    notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification);
+      }
+    }, 3000);
+  }
+}
+
+// Initialize settings when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  // Define CSS variables for theming
+  const root = document.documentElement;
+  root.style.setProperty('--bg-primary', '#0b1220');
+  root.style.setProperty('--bg-secondary', '#0f172a');
+  root.style.setProperty('--bg-sidebar', '#111a2b');
+  root.style.setProperty('--text-primary', '#e6eefc');
+  root.style.setProperty('--text-secondary', '#95a7c3');
+  root.style.setProperty('--border-color', '#243453');
+  root.style.setProperty('--input-bg', '#0e1526');
+  root.style.setProperty('--input-text', '#dbe7ff');
+  root.style.setProperty('--input-border', '#243453');
+  root.style.setProperty('--bg-hover', '#172238');
+  
+  loadSettings();
+  setupThemeListener();
+  
+  // Other initialization code...
+  setTimeout(updateButtonStates, 100);
+  document.getElementById("adjust-interval").value = "5000";
+  checkBackendConnection();
+  document.getElementById('stopDetectionBtn').disabled = true;
+  document.getElementById('stopDetectionBtn').style.opacity = '0.6';
+});
+
+
+function handleThemeChangeFromDropdown() {
+  const themeSelect = document.getElementById('appTheme');
+  updateAppTheme(themeSelect.value);
+}
+      
+// Load available dates for productivity report
+async function loadAvailableDates() {
+  try {
+    const res = await fetch("http://127.0.0.1:5006/predict/productivity/available_dates");
+    const data = await res.json();
+    
+    const dateSelect = document.getElementById("productivityDate");
+    dateSelect.innerHTML = '<option value="">Today</option>';
+    
+    data.available_dates.forEach(date => {
+      const option = document.createElement("option");
+      option.value = date;
+      option.textContent = date;
+      dateSelect.appendChild(option);
+    });
+  } catch (err) {
+    console.error("Error loading dates:", err);
+  }
+}
+
+// Check daily productivity with date selection
+async function checkProductivityDaily() {
+  try {
+    const dateSelect = document.getElementById("productivityDate");
+    const selectedDate = dateSelect.value;
+    
+    let url = "http://127.0.0.1:5006/predict/productivity/daily";
+    if (selectedDate) {
+      url += `?date=${selectedDate}`;
+    }
+    
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (data.error) {
+      document.getElementById("prod-daily-output").innerHTML = 
+        `<span style="color:red;">❌ ${data.error}</span>`;
+      return;
+    }
+    
+    document.getElementById("prod-daily-output").innerHTML = `
+      <b>Date:</b> ${data.date}<br>
+      <b>Total Time:</b> ${data.total_minutes} min<br>
+      <b>Productive:</b> ${data.productive_minutes} min (${data.productive_percentage}%)<br>
+      <b>Distracting:</b> ${data.distracting_minutes} min (${data.distracting_percentage}%)<br>
+      <b>Sessions:</b> ${data.session_count}<br>
+      <b>Breakdown:</b> ⏱ ${Math.floor(data.total_seconds / 3600)}h ${Math.floor((data.total_seconds % 3600) / 60)}m
+    `;
+  } catch (err) {
+    document.getElementById("prod-daily-output").innerHTML = 
+      `<span style="color:red;">❌ Failed to connect to API: ${err}</span>`;
+  }
+}
+
+// Check latest productivity 
+async function checkProductivityLatest() {
+  try {
+    const res = await fetch("http://127.0.0.1:5006/predict/productivity/latest");
+    const data = await res.json();
+    document.getElementById("prod-latest-output").innerHTML = 
+      `<b>App:</b> ${data.app}<br>
+       <b>Prediction:</b> ${data.prediction}<br>
+       <b>Productive:</b> ${(data.probability.productive*100).toFixed(1)}%<br>
+       <b>Distracting:</b> ${(data.probability.distracting*100).toFixed(1)}%<br>
+       <b>Duration:</b> ${Math.floor(data.duration_seconds / 60)}m ${data.duration_seconds % 60}s<br>
+       <b>Brightness:</b> ${data.brightness || 'N/A'}%`;
+  } catch (err) {
+    document.getElementById("prod-latest-output").innerHTML = 
+      `<span style="color:red;">❌ Error: ${err}</span>`;
+  }
+}
+
+// Load dates when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  loadAvailableDates();
+});
+
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "eye-care-dashboard",
+  "version": "0.1.0",
+  "description": "Electron + React dashboard with Python ML bridge",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^29.0.0"
+  }
+}
